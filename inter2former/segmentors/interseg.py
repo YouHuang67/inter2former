@@ -22,7 +22,7 @@ class Inter2FormerClickSegmentor(BaseInter2FormerClickSegmentor):
                                         point_lists,
                                         inner_radius=5,
                                         outer_radius=0,
-                                        fast_mode=False):
+                                        fast_mode=True):
         if ref_labels[..., 0, 0].nelement() != len(point_lists):
             raise ValueError(
                 f'Number of point lists {len(point_lists)} '
