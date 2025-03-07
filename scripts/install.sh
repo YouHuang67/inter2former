@@ -30,6 +30,9 @@ fi
 
 # 4) Install timm
 pip install timm==0.9.7
+pip install einops==0.6.0
+pip install numpy==1.24.1
+pip install opencv-python==4.6.0.66
 
 # 5) Install mmlab related libraries
 pip install -U openmim
