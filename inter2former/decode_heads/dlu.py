@@ -50,7 +50,6 @@ class SimMLP(nn.Sequential):
 class DynamicLocalUpsamplingTrain(nn.Module):
 
     def __init__(self,
-                 train_only_aux,
                  embed_dim,
                  num_upsamplers=4,
                  expand_ratio=1.4,
@@ -68,10 +67,6 @@ class DynamicLocalUpsamplingTrain(nn.Module):
             Upsample2x(embed_dim // 4 ** i, silu=(i < num_upsamplers - 1))
             for i in range(num_upsamplers)
         ])
-
-        if train_only_aux:
-            for param in self.upsamplers.parameters():
-                param.requires_grad = False
 
         self.mlp = SimMLP(
             embed_dim,
@@ -145,7 +140,6 @@ if __name__ == '__main__':
     import torch
     _size = 1024
     head = DynamicLocalUpsampling(
-        train_only_aux=False,
         embed_dim=256,
         num_upsamplers=4)
     _x = torch.randn(2, 256, _size // 16, _size // 16)

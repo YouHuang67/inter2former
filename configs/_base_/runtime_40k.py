@@ -1,5 +1,5 @@
 custom_imports = dict(
-    imports=['interformer', 'mmdet.models'],
+    imports=['inter2former', 'mmdet.models'],
     allow_failed_imports=False
 )
 
