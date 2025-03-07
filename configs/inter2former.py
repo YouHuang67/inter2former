@@ -58,6 +58,8 @@ model = dict(
         type='DynamicLocalUpsamplingTrain',
         embed_dim=256,
         num_upsamplers=4,
+        expand_ratio=1.4,
+        threshold=-2.0,
         loss_decode=[
             dict(type='NormalizedFocalLoss', loss_weight=1.0),
             dict(type='BinaryIoU')]),

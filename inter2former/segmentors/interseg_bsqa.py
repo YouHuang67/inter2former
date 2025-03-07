@@ -252,3 +252,94 @@ class Inter2FormerClickSegmentorBSQA(Inter2FormerClickSegmentor):
             logits_list.append(logits[..., :h, :w].squeeze().detach().cpu().numpy())
         gt_sem_segs = gt_sem_segs.squeeze().detach().cpu().numpy()
         return points, results, gt_sem_segs, logits_list
+
+
+@MODELS.register_module()
+class Inter2FormerClickSegmentorBSQATargetSize(Inter2FormerClickSegmentorBSQA):
+
+    @torch.no_grad()
+    def interact_test(self, inputs, data_samples):
+        cfg = self.test_cfg
+        gt_sem_segs = self.check_gt_validity(data_samples, train=False)
+        gt_sem_segs = gt_sem_segs.to(device=inputs.device)
+
+        if hasattr(cfg, 'sfc_inner_k'):
+            sfc_inner_k = cfg.sfc_inner_k
+        else:
+            sfc_inner_k = 1.0
+        if hasattr(cfg, 'fast_mode'):
+            fast_mode = cfg.fast_mode
+        else:
+            fast_mode = False
+        pts_cfg = dict(
+            inner_radius=cfg.inner_radius, outer_radius=cfg.outer_radius,
+            fast_mode=fast_mode
+        )
+
+        target_size = cfg.target_size
+
+        if hasattr(cfg, 'extra_decode_args'):
+            decode_args = cfg.extra_decode_args
+        else:
+            decode_args = dict()
+
+        self.eval()
+        points, results, logits_list = list(), list(), list()
+        pre_labels = torch.zeros_like(gt_sem_segs)
+        seg_labels = gt_sem_segs
+
+        h, w = inputs.shape[-2:]
+        if h != w:
+            size = max(h, w)
+            padded_inputs = F.pad(inputs, (0, size - w, 0, size - h))
+        else:
+            padded_inputs = inputs
+        resize_shape = (target_size, target_size)
+        scale_factor = target_size / max(h, w)
+        resized_inputs = F.interpolate(padded_inputs,
+                                       size=resize_shape,
+                                       mode='bilinear',
+                                       align_corners=False)
+        image_embeds = self.backbone(resized_inputs)
+        edge_maps = self.edge_detector(resized_inputs)
+        ref_labels = torch.ones_like(resized_inputs)[:, :1] * REF_UNKNOWN
+        for _ in range(cfg.num_clicks):
+            n_prev_pts = len(points)
+            points, *_ = self.update_clicks(
+                pre_labels, seg_labels, [points], sfc_inner_k)
+            if len(points) > n_prev_pts:
+                ref_labels = self.update_ref_label_by_point_lists(
+                    ref_labels,
+                    [[(int(scale_factor * y), int(scale_factor * x), mode)
+                      for y, x, mode in points[n_prev_pts:]]],
+                    **pts_cfg)
+            ori_logits = self.decode_head(
+                self.neck(image_embeds, ref_label=ref_labels),
+                edge_maps, **decode_args)
+            if ori_logits.shape[-2:] != resize_shape:
+                logits = self.interpolate(ori_logits, resize_shape)
+            else:
+                logits = ori_logits
+            pre_labels = self.convert_logits_to_labels(logits, pre_labels.dtype)
+            ref_labels = \
+                self.update_ref_label_by_prediction(ref_labels, pre_labels)
+            if ori_logits.shape[-2:] != padded_inputs.shape[-2:]:
+                logits = self.interpolate(ori_logits, padded_inputs.shape[-2:])
+            else:
+                logits = ori_logits
+            pre_labels = self.convert_logits_to_labels(logits, pre_labels.dtype)
+            sh, sw = seg_labels.shape[-2:]
+            pre_labels = pre_labels[..., :sh, :sw]
+            results.append(pre_labels.squeeze().detach().cpu().numpy())
+            logits_list.append(logits[..., :sh, :sw].squeeze().detach().cpu().numpy())
+        gt_sem_segs = gt_sem_segs.squeeze().detach().cpu().numpy()
+        return points, results, gt_sem_segs, logits_list
+
+    @staticmethod
+    def convert_logits_to_labels(logits, dtype):
+        if logits.shape[1] == 2:
+            return logits.argmax(dim=1, keepdim=True)
+        elif logits.shape[1] == 1:
+            return (logits > 0.0).to(dtype=dtype)
+        else:
+            raise ValueError(f'Invalid logits shape {tuple(logits.shape)}')
