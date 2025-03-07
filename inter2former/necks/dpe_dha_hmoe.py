@@ -637,7 +637,7 @@ class UncertaintyMeasure(nn.Module):
 
 
 @NECKS.register_module()
-class InterFormerDecoderNeck(nn.Module):
+class Inter2FormerDecoderNeck(nn.Module):
 
     NUM_REF_MODES = 5
 
@@ -656,7 +656,7 @@ class InterFormerDecoderNeck(nn.Module):
                  max_update_steps=100_000,
                  num_ffn_experts=None,
                  pre_downsample=1):
-        super(InterFormerDecoderNeck, self).__init__()
+        super(Inter2FormerDecoderNeck, self).__init__()
         if pre_downsample > 1:
             warnings.warn(f'pre_downsample is ignored: {pre_downsample} > 1')
         self.pre_downsample = pre_downsample
@@ -791,7 +791,7 @@ class InterFormerDecoderNeck(nn.Module):
 
 if __name__ == '__main__':
     _dim = 256
-    model = InterFormerDecoderNeck(
+    model = Inter2FormerDecoderNeck(
         downscale=16,
         depth=2,
         embed_dim=_dim,
