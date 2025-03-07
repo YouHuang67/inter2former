@@ -39,9 +39,3 @@ for dir in "${directories[@]}"; do
         echo "Warning: Directory $dir does not exist. Skipping installation."
     fi
 done
-
-
-# 6) Install selective_scan of Mamba
-cd selective_scan
-pip install -e .
-cd ..
