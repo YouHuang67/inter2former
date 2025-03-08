@@ -21,9 +21,9 @@ The zip file contains the following model weight:
 
 Training code will be released in future updates.
 
-## Evaluating the Model
+## Model Evaluation
 
-After training the model, you can evaluate it using the following command:
+To evaluate the pre-trained model, use one of the following commands:
 
 ```bash
 bash tools/dist_test_no_viz.sh configs/datasets/eval_davis.py work_dirs/inter2former_eval/inter2former_sa1b_hq.pth 4 -c configs/eval_custom/ts1024.py
